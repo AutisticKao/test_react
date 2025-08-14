@@ -60,13 +60,28 @@ Implementation of a **Product Dashboard** using **Next.js 14 (App Router)** with
  Bonus: Firebase Authentication (login & protected routes)
 
 ## 📂 Project Structure
+```plaintext
 /app
   /products
-    page.tsx        # Main products page + modal
+    page.tsx              # Main products page (table + modal + search + pagination)
   /api
     /products
-      route.ts      # Handle GET list of products
+      route.ts             # Handle GET list of products (proxy to backend API)
     /product
-      route.ts      # Handle GET, POST, PUT product
+      route.ts             # Handle GET, POST, PUT product (proxy to backend API)
 /components
-  ...               # Additional components
+  ProductModal.tsx         # Reusable modal form for create/edit product
+/lib
+  axios.ts                 # Axios instance with baseURL from .env
+/public
+  favicon.ico
+  ...                      # Static assets if needed
+/styles
+  globals.css              # Global styles (can mix Ant Design + Tailwind if installed)
+  variables.css            # Optional custom CSS variables
+/.env.local                # Environment variables (API_BASE_URL, etc.)
+/package.json
+/tsconfig.json
+/next.config.js
+/README.md
+
