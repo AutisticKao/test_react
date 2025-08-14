@@ -60,6 +60,7 @@ Implementation of a **Product Dashboard** using **Next.js 14 (App Router)** with
  Bonus: Firebase Authentication (login & protected routes)
 
 ## 📂 Project Structure
+```plaintext
 /app
   /products
     page.tsx        # Main products page + modal
@@ -70,3 +71,4 @@ Implementation of a **Product Dashboard** using **Next.js 14 (App Router)** with
       route.ts      # Handle GET, POST, PUT product
 /components
   ...               # Additional components
+
