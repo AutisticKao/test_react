@@ -1,53 +1,75 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Table, Input, Button, Space, Pagination, Typography, message, Popconfirm } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  Table,
+  Input,
+  Button,
+  Space,
+  Pagination,
+  Typography,
+  message,
+  Popconfirm,
+  Tag,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import axios from "axios";
 import ProductModal from "@/components/ProductModal";
 import type { Product, PaginatedResponse } from "@/types/product";
 
 const { Title, Text } = Typography;
 
-const currency = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+const currency = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+});
 
 export default function ProductsPage() {
-  // data state
+  // ===== states
   const [rows, setRows] = useState<Product[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState(false);
 
-  // query state
-  const [page, setPage] = useState(1);
+  // query
+  const [page, setPage] = useState(1); // 1-based
   const [limit] = useState(10);
   const [search, setSearch] = useState("");
 
-  // modal state
+  // modal
   const [openModal, setOpenModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
-  // debounce search (300ms)
-  const debounceTimer = useRef<any>(null);
+  // ===== debounce search
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeSearch = (val: string) => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
       setPage(1);
       setSearch(val);
     }, 300);
   };
 
+  // ===== fetch list
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get<PaginatedResponse<Product>>("/api/products", {
-        params: { page, limit, search },
-      });
+      const { data } = await axios.get<PaginatedResponse<Product>>(
+        "/api/products",
+        { params: { page, limit, search } }
+      );
 
-      const list = (data as any)?.data ?? [];
-      const totalFromApi = (data as any)?.total ?? list.length;
+      // defensive mapper: some APIs return {data, total}, some just array
+      const list = (data as any)?.data ?? (Array.isArray(data) ? data : []);
+      const totalFromApi = Number((data as any)?.total ?? list.length) || 0;
 
       setRows(list);
-      setTotal(Number(totalFromApi) || 0);
+      setTotal(totalFromApi);
     } catch (err: any) {
       console.error(err);
       message.error(err?.response?.data?.error || "Failed to load products");
@@ -62,17 +84,30 @@ export default function ProductsPage() {
     fetchList();
   }, [fetchList]);
 
+  // ===== columns
   const columns = useMemo(
     () => [
-      { title: "Product Title", dataIndex: "product_title", key: "title" },
+      {
+        title: "Title",
+        dataIndex: "product_title",
+        key: "title",
+        render: (t: string) => <Text strong>{t}</Text>,
+      },
       {
         title: "Price",
         dataIndex: "product_price",
         key: "price",
-        render: (v: number) => <Text>{currency.format(Number(v || 0))}</Text>,
         width: 160,
+        render: (v: number) => currency.format(Number(v || 0)),
       },
-      { title: "Category", dataIndex: "product_category", key: "category", width: 160 },
+      {
+        title: "Category",
+        dataIndex: "product_category",
+        key: "category",
+        width: 160,
+        render: (c: string | undefined) =>
+          c ? <Tag color="blue">{c}</Tag> : <Tag>—</Tag>,
+      },
       {
         title: "Description",
         dataIndex: "product_description",
@@ -82,7 +117,7 @@ export default function ProductsPage() {
       {
         title: "Actions",
         key: "actions",
-        width: 160,
+        width: 180,
         render: (_: unknown, record: Product) => (
           <Space>
             <Button
@@ -96,10 +131,10 @@ export default function ProductsPage() {
               Edit
             </Button>
 
-            {/* PDF nggak define DELETE endpoint; tombol di-keep tapi disabled */}
+            {/* Spec PDF nggak define DELETE; keep disabled biar clear */}
             <Popconfirm
               title="Delete product"
-              description="Spec doesn't include DELETE endpoint. Implement on BE first."
+              description="Backend spec has no DELETE endpoint in the PDF."
               okText="OK"
               cancelText="Close"
             >
@@ -114,6 +149,7 @@ export default function ProductsPage() {
     []
   );
 
+  // ===== handlers
   const handleCreateOrEdit = async (values: Partial<Product>) => {
     try {
       if (editing?.product_id) {
@@ -129,20 +165,30 @@ export default function ProductsPage() {
       }
       setOpenModal(false);
       setEditing(null);
-      fetchList();
+      fetchList(); // refresh
     } catch (err: any) {
       message.error(err?.response?.data?.error || "Failed to submit");
     }
   };
 
+  const handleRefresh = () => {
+    fetchList();
+  };
+
+  // ===== render
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
+      <Space
+        align="center"
+        style={{ width: "100%", justifyContent: "space-between" }}
+      >
         <div>
           <Title level={3} style={{ marginBottom: 0 }}>
             Products
           </Title>
-          <Text type="secondary">Search across title, description, and category.</Text>
+          <Text type="secondary">
+            Search, paginate, create & edit products via API proxy.
+          </Text>
         </div>
 
         <Space>
@@ -162,7 +208,7 @@ export default function ProductsPage() {
           >
             Create
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={() => fetchList()} />
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
         </Space>
       </Space>
 

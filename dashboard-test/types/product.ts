@@ -10,14 +10,14 @@ export interface Product {
 }
 
 export interface ProductListParams {
-  page: number;   // 1-based
+  page: number;
   limit: number;
   search?: string;
 }
 
 export interface PaginatedResponse<T> {
   data: T[];
-  total?: number;     // total items (fallback to length if backend not sending)
+  total?: number;
   page?: number;
   limit?: number;
 }
